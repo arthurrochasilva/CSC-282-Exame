@@ -1,0 +1,39 @@
+stages:
+  - scan_before
+  - scan_after
+
+scan_before:
+  stage: scan_before
+  image: python:3.11
+  before_script:
+    - pip install bandit pip-audit semgrep
+    - apt-get update && apt-get install -y git curl
+    - curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - mkdir -p artifacts/scan-before
+    - bandit -r . -f json -o artifacts/scan-before/bandit.json || true
+    - semgrep scan --json --output artifacts/scan-before/semgrep.json . || true
+    - pip-audit -f json -o artifacts/scan-before/pip-audit.json || true
+    - gitleaks detect --source . --report-format json --report-path artifacts/scan-before/gitleaks.json --no-git || true
+  artifacts:
+    when: always
+    paths:
+      - artifacts/scan-before/
+
+scan_after:
+  stage: scan_after
+  image: python:3.11
+  before_script:
+    - pip install bandit pip-audit semgrep
+    - apt-get update && apt-get install -y git curl
+    - curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - mkdir -p artifacts/scan-after
+    - bandit -r . -f json -o artifacts/scan-after/bandit.json || true
+    - semgrep scan --json --output artifacts/scan-after/semgrep.json . || true
+    - pip-audit -f json -o artifacts/scan-after/pip-audit.json || true
+    - gitleaks detect --source . --report-format json --report-path artifacts/scan-after/gitleaks.json --no-git || true
+  artifacts:
+    when: always
+    paths:
+      - artifacts/scan-after/
